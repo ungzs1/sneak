@@ -36,6 +36,21 @@
       max-width: 900px;
     }
 
+    .timer {
+      margin-bottom: 15px;
+      padding: 8px 20px;
+      background-color: #f5f5f5;
+      border-radius: 10px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #333;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    #timer-value {
+      color: #ff4081;
+    }
+
     .score-board {
       display: flex;
       justify-content: space-around;
@@ -232,6 +247,11 @@
         <div class="collectible-value">+3</div>
       </div>
     </div>
+
+    <div class="timer">
+      <span id="timer-label">Time Left: </span>
+      <span id="timer-value">3:00</span>
+    </div>
     
     <canvas id="game-canvas" width="600" height="400"></canvas>
     
@@ -269,6 +289,12 @@
     let isGameActive = false;
     let isFighting = false;
     
+    // Add these variables with the other game state variables
+    let gameStartTime;
+    let gameTimeLimit = 180000; // 3 minutes in milliseconds
+    let timerInterval;
+    const timerValueEl = document.getElementById('timer-value');
+
     // Snake directions
     const DIRECTIONS = {
       UP: { x: 0, y: -1 },
@@ -352,6 +378,7 @@
       statusMessage.style.display = 'none';
       gameOverMessage.style.display = 'none';
       fightOverlay.style.display = 'none';
+      timerValueEl.textContent = '3:00';
       
       // Draw initial game state
       draw();
@@ -363,17 +390,41 @@
       
       initGame();
       isGameActive = true;
+      gameStartTime = Date.now();
       gameInterval = setInterval(gameLoop, GAME_SPEED);
+      timerInterval = setInterval(updateTimer, 1000);
       startBtn.disabled = true;
+    }
+
+    // Add this new function for the timer
+    function updateTimer() {
+      if (!isGameActive) return;
+      
+      const elapsed = Date.now() - gameStartTime;
+      const remaining = Math.max(0, gameTimeLimit - elapsed);
+      
+      if (remaining <= 0) {
+        // Time's up
+        endGame("Time's up!");
+        return;
+      }
+      
+      // Format and display the remaining time
+      const minutes = Math.floor(remaining / 60000);
+      const seconds = Math.floor((remaining % 60000) / 1000);
+      timerValueEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }
     
     // Restart the game
+    // Modify the restartGame function to clear the timer interval
     function restartGame() {
       clearInterval(gameInterval);
+      clearInterval(timerInterval);
       isGameActive = false;
       isFighting = false;
       startBtn.disabled = false;
       initGame();
+      timerValueEl.textContent = '3:00';
     }
     
     // Main game loop
@@ -410,6 +461,7 @@
     }
     
     // Move a snake
+    // ...existing code...
     function moveSnake(snake) {
       // Update direction based on nextDirection
       snake.direction = snake.nextDirection;
@@ -419,34 +471,31 @@
       head.x += snake.direction.x;
       head.y += snake.direction.y;
       
+      // Teleport at walls
+      if (head.x < 0) head.x = GRID_WIDTH - 1;
+      if (head.x >= GRID_WIDTH) head.x = 0;
+      if (head.y < 0) head.y = GRID_HEIGHT - 1;
+      if (head.y >= GRID_HEIGHT) head.y = 0;
+      
       // Add new head to the beginning of the body
       snake.body.unshift(head);
       
       // Remove tail (unless we've just eaten)
       snake.body.pop();
     }
-    
+    // ...existing code...
     // Check for collisions
     // Check for collisions
+  // ...existing code...
   function checkCollisions() {
-    // Check if snake 1 hits wall
     const head1 = snake1.body[0];
-    if (head1.x < 0 || head1.x >= GRID_WIDTH || head1.y < 0 || head1.y >= GRID_HEIGHT) {
-      statusMessage.textContent = `${snake1.name} hit the wall!`;
-      return true;
-    }
-    
-    // Check if snake 2 hits wall
     const head2 = snake2.body[0];
-    if (head2.x < 0 || head2.x >= GRID_WIDTH || head2.y < 0 || head2.y >= GRID_HEIGHT) {
-      statusMessage.textContent = `${snake2.name} hit the wall!`;
-      return true;
-    }
     
     // Check if snake 1 hits itself
     for (let i = 1; i < snake1.body.length; i++) {
       if (head1.x === snake1.body[i].x && head1.y === snake1.body[i].y) {
-        statusMessage.textContent = `${snake1.name} hit herself!`;
+        statusMessage.textContent = `${snake1.name} hit herself! ${snake2.name} wins!`;
+        snake2.score += 5; // Bonus points for winning
         return true;
       }
     }
@@ -454,13 +503,15 @@
     // Check if snake 2 hits itself
     for (let i = 1; i < snake2.body.length; i++) {
       if (head2.x === snake2.body[i].x && head2.y === snake2.body[i].y) {
-        statusMessage.textContent = `${snake2.name} hit herself!`;
+        statusMessage.textContent = `${snake2.name} hit herself! ${snake1.name} wins!`;
+        snake1.score += 5; // Bonus points for winning
         return true;
       }
     }
     
     return false;
   }
+  // ...existing code...
     
     // Check if snakes collect items
     function checkCollectibles(snake) {
@@ -738,9 +789,11 @@
     }
     
     // End the game
-    function endGame() {
+    // Modify the endGame function
+    function endGame(reason) {
       isGameActive = false;
       clearInterval(gameInterval);
+      clearInterval(timerInterval);
       
       // Determine winner
       let winner;
@@ -757,6 +810,7 @@
       gameOverMessage.style.display = 'block';
       gameOverMessage.innerHTML = `
         Game Over!<br>
+        ${reason || ''}<br>
         ${winner === "It's a tie!" ? winner : winner + ' wins!'}<br>
         Final Score: ${snake1.name} ${snake1.score} - ${snake2.name} ${snake2.score}
       `;
