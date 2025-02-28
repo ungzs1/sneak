@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nono vs Julia Snake Game</title>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      background-color: #ffebf7;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      color: #ff4081;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background-color: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .score-board {
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    .player-score {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 20px;
+      border-radius: 10px;
+      color: white;
+      font-weight: bold;
+      font-size: 18px;
+      min-width: 150px;
+      text-align: center;
+    }
+
+    #player1-score {
+      background-color: #ff4081;
+    }
+
+    #player2-score {
+      background-color: #673ab7;
+    }
+
+    canvas {
+      background-color: #f7f7f7;
+      border-radius: 10px;
+      border: 3px solid #ccc;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+      gap: 15px;
+    }
+
+    .control-btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    #start-btn {
+      background-color: #4caf50;
+      color: white;
+    }
+
+    #start-btn:hover {
+      background-color: #388e3c;
+      transform: translateY(-2px);
+    }
+
+    #restart-btn {
+      background-color: #f44336;
+      color: white;
+    }
+
+    #restart-btn:hover {
+      background-color: #d32f2f;
+      transform: translateY(-2px);
+    }
+
+    .instructions {
+      background-color: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      max-width: 800px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .instructions h2 {
+      color: #673ab7;
+      margin-top: 0;
+    }
+
+    .instructions ul {
+      padding-left: 20px;
+    }
+
+    .status-message {
+      margin-top: 15px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      text-align: center;
+      background-color: #e0f7fa;
+      color: #00838f;
+      display: none;
+    }
+
+    .collectibles {
+      display: flex;
+      justify-content: center;
+      margin-top: 15px;
+      gap: 20px;
+    }
+
+    .collectible {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .collectible-icon {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    .collectible-value {
+      font-weight: bold;
+    }
+    
+    .game-over {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 20px 40px;
+      border-radius: 10px;
+      font-size: 24px;
+      text-align: center;
+      display: none;
+      z-index: 100;
+    }
+    
+    .fight-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(255, 0, 0, 0.3);
+      color: white;
+      padding: 20px 40px;
+      border-radius: 10px;
+      font-size: 24px;
+      text-align: center;
+      display: none;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <h1>Nono vs. Julia Snake Game</h1>
+  
+  <div class="instructions">
+    <h2>How to Play:</h2>
+    <ul>
+      <li><strong>Nono (Pink):</strong> Use WASD keys to move</li>
+      <li><strong>Julia (Purple):</strong> Use Arrow keys to move</li>
+      <li><strong>Collect:</strong> Makeup (💄), Pizza (🍕), and Charming Boys (👦)</li>
+      <li><strong>Fight Risk:</strong> When snakes cross paths, they might "get into a fight and not talk to each other for a while" (game freezes for 2 seconds)</li>
+      <li><strong>Winning:</strong> The player with more points when the game ends (by collision with wall, other snake, or yourself)</li>
+    </ul>
+  </div>
+  
+  <div class="game-container">
+    <div class="score-board">
+      <div class="player-score" id="player1-score">
+        <div>Nono</div>
+        <div id="p1-score">0</div>
+      </div>
+      
+      <div class="player-score" id="player2-score">
+        <div>Julia</div>
+        <div id="p2-score">0</div>
+      </div>
+    </div>
+    
+    <div class="collectibles">
+      <div class="collectible">
+        <div class="collectible-icon">💄</div>
+        <div class="collectible-value">+1</div>
+      </div>
+      <div class="collectible">
+        <div class="collectible-icon">🍕</div>
+        <div class="collectible-value">+2</div>
+      </div>
+      <div class="collectible">
+        <div class="collectible-icon">👦</div>
+        <div class="collectible-value">+3</div>
+      </div>
+    </div>
+    
+    <canvas id="game-canvas" width="600" height="400"></canvas>
+    
+    <div class="status-message" id="status-message"></div>
+    
+    <div class="controls">
+      <button class="control-btn" id="start-btn">Start Game</button>
+      <button class="control-btn" id="restart-btn">Restart Game</button>
+    </div>
+    
+    <div class="game-over" id="game-over"></div>
+    <div class="fight-overlay" id="fight-overlay">Getting into a fight! Not talking for 2 seconds!</div>
+  </div>
+  
+  <script>
+    // Game elements
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const startBtn = document.getElementById('start-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const player1ScoreElem = document.getElementById('p1-score');
+    const player2ScoreElem = document.getElementById('p2-score');
+    const statusMessage = document.getElementById('status-message');
+    const gameOverMessage = document.getElementById('game-over');
+    const fightOverlay = document.getElementById('fight-overlay');
+    
+    // Game constants
+    const GRID_SIZE = 20;
+    const GRID_WIDTH = canvas.width / GRID_SIZE;
+    const GRID_HEIGHT = canvas.height / GRID_SIZE;
+    const GAME_SPEED = 150; // ms
+    
+    // Game state
+    let gameInterval;
+    let isGameActive = false;
+    let isFighting = false;
+    
+    // Snake directions
+    const DIRECTIONS = {
+      UP: { x: 0, y: -1 },
+      DOWN: { x: 0, y: 1 },
+      LEFT: { x: -1, y: 0 },
+      RIGHT: { x: 1, y: 0 }
+    };
+    
+    // Collectible types
+    const COLLECTIBLES = {
+      MAKEUP: { emoji: '💄', value: 1, color: '#ff80ab' },
+      PIZZA: { emoji: '🍕', value: 2, color: '#ffa726' },
+      BOY: { emoji: '👦', value: 3, color: '#64b5f6' }
+    };
+    
+    // Player 1 (Nono) snake
+    let snake1 = {
+      body: [{ x: 5, y: 10 }],
+      direction: DIRECTIONS.RIGHT,
+      nextDirection: DIRECTIONS.RIGHT,
+      color: '#ff4081',
+      score: 0,
+      name: 'Nono',
+      headImg: null
+    };
+    
+    // Player 2 (Julia) snake
+    let snake2 = {
+      body: [{ x: 25, y: 10 }],
+      direction: DIRECTIONS.LEFT,
+      nextDirection: DIRECTIONS.LEFT,
+      color: '#673ab7',
+      score: 0,
+      name: 'Julia',
+      headImg: null
+    };
+    
+    // Collectibles on the board
+    let collectibles = [];
+    
+    // Load snake head images
+    const nonoImg = new Image();
+    nonoImg.src = "nono.png"
+    
+    const juliaImg = new Image();
+    juliaImg.src = "julia.png"
+    
+    // Set images when loaded
+    nonoImg.onload = () => {
+      snake1.headImg = nonoImg;
+    };
+    
+    juliaImg.onload = () => {
+      snake2.headImg = juliaImg;
+    };
+    
+    // Initialize the game
+    function initGame() {
+      // Reset snake 1
+      snake1.body = [{ x: 5, y: 10 }];
+      snake1.direction = DIRECTIONS.RIGHT;
+      snake1.nextDirection = DIRECTIONS.RIGHT;
+      snake1.score = 0;
+      
+      // Reset snake 2
+      snake2.body = [{ x: 25, y: 10 }];
+      snake2.direction = DIRECTIONS.LEFT;
+      snake2.nextDirection = DIRECTIONS.LEFT;
+      snake2.score = 0;
+      
+      // Clear collectibles and add initial ones
+      collectibles = [];
+      addCollectible();
+      addCollectible();
+      addCollectible();
+      
+      // Update score display
+      updateScores();
+      
+      // Reset messages
+      statusMessage.style.display = 'none';
+      gameOverMessage.style.display = 'none';
+      fightOverlay.style.display = 'none';
+      
+      // Draw initial game state
+      draw();
+    }
+    
+    // Start the game
+    function startGame() {
+      if (isGameActive) return;
+      
+      initGame();
+      isGameActive = true;
+      gameInterval = setInterval(gameLoop, GAME_SPEED);
+      startBtn.disabled = true;
+    }
+    
+    // Restart the game
+    function restartGame() {
+      clearInterval(gameInterval);
+      isGameActive = false;
+      isFighting = false;
+      startBtn.disabled = false;
+      initGame();
+    }
+    
+    // Main game loop
+    function gameLoop() {
+      if (!isGameActive) return;
+      
+      // Skip updates during fight
+      if (isFighting) return;
+      
+      // Update snake positions
+      moveSnake(snake1);
+      moveSnake(snake2);
+      
+      // Check for collisions
+      if (checkCollisions()) {
+        endGame();
+        return;
+      }
+      
+      // Check for collectibles
+      checkCollectibles(snake1);
+      checkCollectibles(snake2);
+      
+      // Check if snakes cross paths (potential fight)
+      checkForFight();
+      
+      // Ensure we have enough collectibles
+      while (collectibles.length < 3) {
+        addCollectible();
+      }
+      
+      // Draw the updated game state
+      draw();
+    }
+    
+    // Move a snake
+    function moveSnake(snake) {
+      // Update direction based on nextDirection
+      snake.direction = snake.nextDirection;
+      
+      // Calculate new head position
+      const head = { ...snake.body[0] };
+      head.x += snake.direction.x;
+      head.y += snake.direction.y;
+      
+      // Add new head to the beginning of the body
+      snake.body.unshift(head);
+      
+      // Remove tail (unless we've just eaten)
+      snake.body.pop();
+    }
+    
+    // Check for collisions
+    // Check for collisions
+  function checkCollisions() {
+    // Check if snake 1 hits wall
+    const head1 = snake1.body[0];
+    if (head1.x < 0 || head1.x >= GRID_WIDTH || head1.y < 0 || head1.y >= GRID_HEIGHT) {
+      statusMessage.textContent = `${snake1.name} hit the wall!`;
+      return true;
+    }
+    
+    // Check if snake 2 hits wall
+    const head2 = snake2.body[0];
+    if (head2.x < 0 || head2.x >= GRID_WIDTH || head2.y < 0 || head2.y >= GRID_HEIGHT) {
+      statusMessage.textContent = `${snake2.name} hit the wall!`;
+      return true;
+    }
+    
+    // Check if snake 1 hits itself
+    for (let i = 1; i < snake1.body.length; i++) {
+      if (head1.x === snake1.body[i].x && head1.y === snake1.body[i].y) {
+        statusMessage.textContent = `${snake1.name} hit herself!`;
+        return true;
+      }
+    }
+    
+    // Check if snake 2 hits itself
+    for (let i = 1; i < snake2.body.length; i++) {
+      if (head2.x === snake2.body[i].x && head2.y === snake2.body[i].y) {
+        statusMessage.textContent = `${snake2.name} hit herself!`;
+        return true;
+      }
+    }
+    
+    return false;
+  }
+    
+    // Check if snakes collect items
+    function checkCollectibles(snake) {
+      const head = snake.body[0];
+      
+      for (let i = 0; i < collectibles.length; i++) {
+        const collectible = collectibles[i];
+        
+        if (head.x === collectible.x && head.y === collectible.y) {
+          // Add points
+          snake.score += collectible.type.value;
+          
+          // Grow the snake
+          for (let j = 0; j < collectible.type.value; j++) {
+            const tail = snake.body[snake.body.length - 1];
+            snake.body.push({ ...tail });
+          }
+          
+          // Remove the collectible
+          collectibles.splice(i, 1);
+          
+          // Update score display
+          updateScores();
+          
+          // Add a new collectible
+          addCollectible();
+          
+          break;
+        }
+      }
+    }
+    
+    // Check if snakes might get into a fight
+    // Check if snakes might get into a fight
+    function checkForFight() {
+      const head1 = snake1.body[0];
+      const head2 = snake2.body[0];
+      
+      // Check if heads are adjacent
+      const areHeadsAdjacent = 
+        (Math.abs(head1.x - head2.x) === 1 && head1.y === head2.y) ||
+        (Math.abs(head1.y - head2.y) === 1 && head1.x === head2.x);
+      
+      // Check if snake1's head hits snake2's body
+      let snake1HitsSnake2 = false;
+      for (let i = 0; i < snake2.body.length; i++) {
+        if (head1.x === snake2.body[i].x && head1.y === snake2.body[i].y) {
+          snake1HitsSnake2 = true;
+          break;
+        }
+      }
+      
+      // Check if snake2's head hits snake1's body
+      let snake2HitsSnake1 = false;
+      for (let i = 0; i < snake1.body.length; i++) {
+        if (head2.x === snake1.body[i].x && head2.y === snake1.body[i].y) {
+          snake2HitsSnake1 = true;
+          break;
+        }
+      }
+      
+      // Start a fight if heads are adjacent (20% chance) or if there's a collision
+      if ((areHeadsAdjacent && Math.random() < 0.2) || snake1HitsSnake2 || snake2HitsSnake1) {
+        startFight();
+      }
+    }
+    
+    // Start a fight (freeze the game)
+    function startFight() {
+      isFighting = true;
+      fightOverlay.style.display = 'block';
+      
+      // End fight after 2 seconds
+      setTimeout(() => {
+        isFighting = false;
+        fightOverlay.style.display = 'none';
+      }, 2000);
+    }
+    
+    // Add a collectible to the board
+    function addCollectible() {
+      // Select random position that's not occupied by snakes
+      let x, y, isValid;
+      
+      do {
+        isValid = true;
+        x = Math.floor(Math.random() * GRID_WIDTH);
+        y = Math.floor(Math.random() * GRID_HEIGHT);
+        
+        // Check if position is occupied by snake 1
+        for (const segment of snake1.body) {
+          if (segment.x === x && segment.y === y) {
+            isValid = false;
+            break;
+          }
+        }
+        
+        // Check if position is occupied by snake 2
+        if (isValid) {
+          for (const segment of snake2.body) {
+            if (segment.x === x && segment.y === y) {
+              isValid = false;
+              break;
+            }
+          }
+        }
+        
+        // Check if position is occupied by another collectible
+        if (isValid) {
+          for (const collectible of collectibles) {
+            if (collectible.x === x && collectible.y === y) {
+              isValid = false;
+              break;
+            }
+          }
+        }
+      } while (!isValid);
+      
+      // Select random collectible type
+      const types = [COLLECTIBLES.MAKEUP, COLLECTIBLES.PIZZA, COLLECTIBLES.BOY];
+      const type = types[Math.floor(Math.random() * types.length)];
+      
+      // Add to collectibles array
+      collectibles.push({ x, y, type });
+    }
+    
+    // Draw the game state
+    function draw() {
+      // Clear the canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw grid (optional)
+      drawGrid();
+      
+      // Draw collectibles
+      drawCollectibles();
+      
+      // Draw snakes
+      drawSnake(snake1);
+      drawSnake(snake2);
+    }
+    
+    // Draw the background grid
+    function drawGrid() {
+      ctx.strokeStyle = '#e0e0e0';
+      ctx.lineWidth = 0.5;
+      
+      // Vertical lines
+      for (let x = 0; x <= canvas.width; x += GRID_SIZE) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      
+      // Horizontal lines
+      for (let y = 0; y <= canvas.height; y += GRID_SIZE) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+    }
+    
+    // Draw a snake
+    function drawSnake(snake) {
+      // Draw body segments
+      for (let i = 1; i < snake.body.length; i++) {
+        const segment = snake.body[i];
+        
+        ctx.fillStyle = snake.color;
+        ctx.fillRect(
+          segment.x * GRID_SIZE,
+          segment.y * GRID_SIZE,
+          GRID_SIZE,
+          GRID_SIZE
+        );
+        
+        // Add inner highlight
+        ctx.fillStyle = lightenColor(snake.color, 30);
+        ctx.fillRect(
+          segment.x * GRID_SIZE + 4,
+          segment.y * GRID_SIZE + 4,
+          GRID_SIZE - 8,
+          GRID_SIZE - 8
+        );
+      }
+      
+      // Draw head (with image if loaded)
+      const head = snake.body[0];
+      
+      if (snake.headImg) {
+        ctx.drawImage(
+          snake.headImg,
+          head.x * GRID_SIZE - 10,
+          head.y * GRID_SIZE - 10,
+          GRID_SIZE + 20,
+          GRID_SIZE + 20
+        );
+      } else {
+        // Fallback if image not loaded
+        ctx.fillStyle = snake.color;
+        ctx.fillRect(
+          head.x * GRID_SIZE,
+          head.y * GRID_SIZE,
+          GRID_SIZE,
+          GRID_SIZE
+        );
+        
+        // Draw eyes
+        ctx.fillStyle = 'white';
+        
+        // Adjust eye positions based on direction
+        let leftEyeX = head.x * GRID_SIZE + 4;
+        let leftEyeY = head.y * GRID_SIZE + 4;
+        let rightEyeX = head.x * GRID_SIZE + GRID_SIZE - 8;
+        let rightEyeY = head.y * GRID_SIZE + 4;
+        
+        if (snake.direction === DIRECTIONS.LEFT) {
+          leftEyeY = head.y * GRID_SIZE + 4;
+          rightEyeY = head.y * GRID_SIZE + GRID_SIZE - 8;
+          leftEyeX = head.x * GRID_SIZE + 4;
+          rightEyeX = head.x * GRID_SIZE + 4;
+        } else if (snake.direction === DIRECTIONS.RIGHT) {
+          leftEyeY = head.y * GRID_SIZE + 4;
+          rightEyeY = head.y * GRID_SIZE + GRID_SIZE - 8;
+          leftEyeX = head.x * GRID_SIZE + GRID_SIZE - 8;
+          rightEyeX = head.x * GRID_SIZE + GRID_SIZE - 8;
+        } else if (snake.direction === DIRECTIONS.UP) {
+          leftEyeX = head.x * GRID_SIZE + 4;
+          rightEyeX = head.x * GRID_SIZE + GRID_SIZE - 8;
+          leftEyeY = head.y * GRID_SIZE + 4;
+          rightEyeY = head.y * GRID_SIZE + 4;
+        } else if (snake.direction === DIRECTIONS.DOWN) {
+          leftEyeX = head.x * GRID_SIZE + 4;
+          rightEyeX = head.x * GRID_SIZE + GRID_SIZE - 8;
+          leftEyeY = head.y * GRID_SIZE + GRID_SIZE - 8;
+          rightEyeY = head.y * GRID_SIZE + GRID_SIZE - 8;
+        }
+        
+        ctx.fillRect(leftEyeX, leftEyeY, 4, 4);
+        ctx.fillRect(rightEyeX, rightEyeY, 4, 4);
+      }
+    }
+    
+    // Draw collectibles
+    function drawCollectibles() {
+      for (const collectible of collectibles) {
+        // Draw background
+        ctx.fillStyle = collectible.type.color;
+        ctx.fillRect(
+          collectible.x * GRID_SIZE,
+          collectible.y * GRID_SIZE,
+          GRID_SIZE,
+          GRID_SIZE
+        );
+        
+        // Draw emoji
+        ctx.font = '16px Arial';
+        ctx.fillStyle = 'black';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(
+          collectible.type.emoji,
+          collectible.x * GRID_SIZE + GRID_SIZE / 2,
+          collectible.y * GRID_SIZE + GRID_SIZE / 2
+        );
+      }
+    }
+    
+    // Update score display
+    function updateScores() {
+      player1ScoreElem.textContent = snake1.score;
+      player2ScoreElem.textContent = snake2.score;
+    }
+    
+    // End the game
+    function endGame() {
+      isGameActive = false;
+      clearInterval(gameInterval);
+      
+      // Determine winner
+      let winner;
+      if (snake1.score > snake2.score) {
+        winner = snake1.name;
+      } else if (snake2.score > snake1.score) {
+        winner = snake2.name;
+      } else {
+        winner = "It's a tie!";
+      }
+      
+      // Display game over message
+      statusMessage.style.display = 'block';
+      gameOverMessage.style.display = 'block';
+      gameOverMessage.innerHTML = `
+        Game Over!<br>
+        ${winner === "It's a tie!" ? winner : winner + ' wins!'}<br>
+        Final Score: ${snake1.name} ${snake1.score} - ${snake2.name} ${snake2.score}
+      `;
+      
+      // Enable start button
+      startBtn.disabled = false;
+    }
+    
+    // Helper function to lighten colors
+    function lightenColor(color, percent) {
+      const num = parseInt(color.replace('#', ''), 16);
+      const amt = Math.round(2.55 * percent);
+      const R = (num >> 16) + amt;
+      const G = (num >> 8 & 0x00FF) + amt;
+      const B = (num & 0x0000FF) + amt;
+      
+      return '#' + (
+        0x1000000 +
+        (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+        (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+        (B < 255 ? B < 1 ? 0 : B : 255)
+      ).toString(16).slice(1);
+    }
+    
+    // Handle keyboard input
+    document.addEventListener('keydown', function(event) {
+      if (!isGameActive || isFighting) return;
+      
+      // Player 1 controls (WASD)
+      switch (event.key.toLowerCase()) {
+        case 'w':
+          if (snake1.direction !== DIRECTIONS.DOWN) {
+            snake1.nextDirection = DIRECTIONS.UP;
+          }
+          break;
+        case 'a':
+          if (snake1.direction !== DIRECTIONS.RIGHT) {
+            snake1.nextDirection = DIRECTIONS.LEFT;
+          }
+          break;
+        case 's':
+          if (snake1.direction !== DIRECTIONS.UP) {
+            snake1.nextDirection = DIRECTIONS.DOWN;
+          }
+          break;
+        case 'd':
+          if (snake1.direction !== DIRECTIONS.LEFT) {
+            snake1.nextDirection = DIRECTIONS.RIGHT;
+          }
+          break;
+      }
+      
+      // Player 2 controls (Arrow keys)
+      switch (event.key) {
+        case 'ArrowUp':
+          if (snake2.direction !== DIRECTIONS.DOWN) {
+            snake2.nextDirection = DIRECTIONS.UP;
+          }
+          event.preventDefault(); // Prevent page scrolling
+          break;
+        case 'ArrowLeft':
+          if (snake2.direction !== DIRECTIONS.RIGHT) {
+            snake2.nextDirection = DIRECTIONS.LEFT;
+          }
+          event.preventDefault();
+          break;
+        case 'ArrowDown':
+          if (snake2.direction !== DIRECTIONS.UP) {
+            snake2.nextDirection = DIRECTIONS.DOWN;
+          }
+          event.preventDefault();
+          break;
+        case 'ArrowRight':
+          if (snake2.direction !== DIRECTIONS.LEFT) {
+            snake2.nextDirection = DIRECTIONS.RIGHT;
+          }
+          event.preventDefault();
+          break;
+      }
+    });
+    
+    // Event listeners for buttons
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', restartGame);
+    
+    // Initialize game 
+    initGame();
+  </script>
+</body>
+</html>
